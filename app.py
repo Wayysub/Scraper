@@ -12,19 +12,21 @@ app = Flask(__name__)
 # Celery Configuration using Redis URL from environment variable
 redis_url = os.getenv('REDIS_URL', 'rediss://red-csrlobggph6c73b8o3tg:GsHXpplWrrF5QTUUN3Dr6HgZOo8bryN5@oregon-redis.render.com:6379')
 
-# Update broker URL and backend with SSL requirements
 app.config['CELERY_BROKER_URL'] = redis_url
 app.config['CELERY_RESULT_BACKEND'] = redis_url
+
+# Setting SSL options for Celery broker and backend
+ssl_options = {
+    'ssl_cert_reqs': 'CERT_NONE'  # Change to 'CERT_REQUIRED' if you have valid certificates
+}
+
 app.config['CELERY_BROKER_TRANSPORT_OPTIONS'] = {
     'visibility_timeout': 3600,  # 1 hour timeout
-    'ssl': {
-        'ssl_cert_reqs': 'CERT_NONE'  # Adjust this to 'CERT_REQUIRED' if you have valid certificates
-    }
+    'ssl': ssl_options
 }
+
 app.config['CELERY_REDIS_BACKEND_TRANSPORT_OPTIONS'] = {
-    'ssl': {
-        'ssl_cert_reqs': 'CERT_NONE'  # Ensure backend also has SSL configured properly
-    }
+    'ssl': ssl_options
 }
 
 celery = make_celery(app)
