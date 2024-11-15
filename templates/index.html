@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yellow Pages Scraper</title>
+    <!-- Add Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #loadingMessage {
+            display: none;
+            text-align: center;
+            font-size: 1.2em;
+            color: #007bff;
+        }
+        .green-tick {
+            color: #28a745;
+            font-size: 2em;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Yellow Pages Scraper</h1>
+        <div class="card p-4">
+            <form id="scrapeForm">
+                <div class="form-group">
+                    <label for="keyword">Keyword:</label>
+                    <input type="text" class="form-control" id="keyword" name="keyword" placeholder="e.g., Plumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location:</label>
+                    <input type="text" class="form-control" id="location" name="location" placeholder="e.g., Sydney" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="max_pages">Max Pages:</label>
+                    <input type="number" class="form-control" id="max_pages" name="max_pages" min="1" placeholder="e.g., 5" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Search</button>
+            </form>
+            <div id="loadingMessage" class="mt-4">
+                <div id="loadingSpinner" class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <div id="greenTick" class="green-tick">
+                    &#10003; <!-- Unicode for check mark -->
+                </div>
+                <p id="loadingText">Please wait, scraping in progress...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Bootstrap JavaScript and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.4.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <!-- JavaScript for loading message -->
+    <script>
+        $(document).ready(function() {
+            $('#scrapeForm').on('submit', function(e) {
+                e.preventDefault();
+                $('#loadingMessage').show();
+                $('#loadingSpinner').show();
+                $('#greenTick').hide();
+                $('#loadingText').text('Please wait, scraping in progress...');
+
+                $.ajax({
+                    url: '/',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            $('#loadingSpinner').hide(); // Hide spinner
+                            $('#greenTick').show(); // Show green tick
+                            $('#loadingText').text('Done! Your report is ready.');
+                            window.location.href = '/download';  // Redirect to download the CSV
+                        }
+                    },
+                    error: function() {
+                        $('#loadingText').text('An error occurred. Please try again.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
