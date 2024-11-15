@@ -7,8 +7,9 @@ import os
 app = Flask(__name__)
 
 # Celery Configuration
-app.config['CELERY_BROKER_URL'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+app.config['CELERY_BROKER_URL'] = os.getenv('redis://red-csrlobggph6c73b8o3tg:6379', 'redis://localhost:6379/0')
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('redis://red-csrlobggph6c73b8o3tg:6379', 'redis://localhost:6379/0')
+
 
 celery = make_celery(app)
 
