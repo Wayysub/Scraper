@@ -1,8 +1,11 @@
+import requests
+from bs4 import BeautifulSoup
+import time
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for
 import pandas as pd
-from scraper import scrape_yellow_pages
-from celery_config import make_celery
+from scraper import scrape_yellow_pages  # Import the updated scraper function
 import os
+from celery_config import make_celery
 
 app = Flask(__name__)
 
@@ -10,6 +13,12 @@ app = Flask(__name__)
 redis_url = os.getenv('REDIS_URL', 'rediss://red-csrlobggph6c73b8o3tg:GsHXpplWrrF5QTUUN3Dr6HgZOo8bryN5@oregon-redis.render.com:6379')
 app.config['CELERY_BROKER_URL'] = redis_url
 app.config['CELERY_RESULT_BACKEND'] = redis_url
+app.config['CELERY_BROKER_TRANSPORT_OPTIONS'] = {
+    'visibility_timeout': 3600,  # 1 hour timeout
+    'ssl': {
+        'ssl_cert_reqs': 'CERT_NONE'  # Adjust this to 'CERT_REQUIRED' if you have certificates
+    }
+}
 
 celery = make_celery(app)
 
