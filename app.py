@@ -1,8 +1,16 @@
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for
 import pandas as pd
-from scraper import scrape_yellow_pages  # Import the updated scraper function
+from scraper import scrape_yellow_pages
+from celery_config import make_celery
+import os
 
 app = Flask(__name__)
+
+# Celery Configuration
+app.config['CELERY_BROKER_URL'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+celery = make_celery(app)
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -12,7 +20,40 @@ def home():
         location = request.form.get('location')
         max_pages = int(request.form.get('max_pages'))
 
-        # Call the updated scraper function
+        # Start background scraping task
+        task = scrape_yellow_pages_task.apply_async(args=[keyword, location, max_pages])
+
+        # Redirect to a page where the user can wait for the task completion
+        return redirect(url_for('task_status', task_id=task.id))
+
+    return render_template('index.html')
+
+@app.route('/status/<task_id>')
+def task_status(task_id):
+    task = scrape_yellow_pages_task.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {
+            'state': task.state,
+            'status': 'Pending...'
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            'status': task.info.get('status', '')
+        }
+        if 'result' in task.info:
+            response['result'] = task.info['result']
+    else:
+        # Something went wrong in the background job
+        response = {
+            'state': task.state,
+            'status': str(task.info),  # this is the exception raised
+        }
+    return jsonify(response)
+
+@celery.task(bind=True)
+def scrape_yellow_pages_task(self, keyword, location, max_pages):
+    try:
         listings = scrape_yellow_pages(keyword, location, max_pages)
 
         # Save results to a CSV file
@@ -20,10 +61,9 @@ def home():
         df = pd.DataFrame(listings)
         df.to_csv(output_file, index=False)
 
-        # Return a JSON response indicating success
-        return jsonify({"status": "success"})
-
-    return render_template('index.html')
+        return {'current': 100, 'total': 100, 'status': 'Task completed!', 'result': output_file}
+    except Exception as e:
+        raise self.retry(exc=e, countdown=10, max_retries=3)
 
 @app.route('/download')
 def download():
