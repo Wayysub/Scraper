@@ -15,19 +15,14 @@ redis_url = os.getenv('REDIS_URL', 'rediss://red-csrlobggph6c73b8o3tg:GsHXpplWrr
 app.config['CELERY_BROKER_URL'] = redis_url
 app.config['CELERY_RESULT_BACKEND'] = redis_url
 
-# Setting SSL options for Celery broker and backend
+# Setting SSL options for both broker and backend using proper Celery configuration parameters
 ssl_options = {
-    'ssl_cert_reqs': 'CERT_NONE'  # Change to 'CERT_REQUIRED' if you have valid certificates
+    'ssl_cert_reqs': 'CERT_NONE'  # Use 'CERT_REQUIRED' if you have valid certificates
 }
 
-app.config['CELERY_BROKER_TRANSPORT_OPTIONS'] = {
-    'visibility_timeout': 3600,  # 1 hour timeout
-    'ssl': ssl_options
-}
-
-app.config['CELERY_REDIS_BACKEND_TRANSPORT_OPTIONS'] = {
-    'ssl': ssl_options
-}
+# Applying SSL options for both broker and backend
+app.config['CELERY_BROKER_USE_SSL'] = ssl_options
+app.config['CELERY_REDIS_BACKEND_USE_SSL'] = ssl_options
 
 celery = make_celery(app)
 
