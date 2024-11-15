@@ -5,7 +5,9 @@ import time
 def scrape_yellow_pages(keyword, location, max_pages):
     base_url = f"https://www.yellowpages.com.au/search/listings?clue={keyword}&locationClue={location}"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com"
     }
     listings = []
     seen_businesses = set()  # Set to track unique businesses by name
@@ -14,11 +16,13 @@ def scrape_yellow_pages(keyword, location, max_pages):
         url = f"{base_url}&pageNumber={page}"
         print(f"Scraping {url}")
         
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            print(f"Failed to retrieve data from {url}")
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()  # Raise an error for bad status codes
+        except requests.exceptions.RequestException as e:
+            print(f"Error while making request to {url}: {e}")
             continue
-        
+
         soup = BeautifulSoup(response.content, "html.parser")
         
         for item in soup.find_all("div", class_=["FreeListing", "PaidListing"]):  # Adjusted the class to match actual content containers
@@ -46,7 +50,7 @@ def scrape_yellow_pages(keyword, location, max_pages):
                 print(f"An error occurred while extracting details for an item: {e}")
         
         # Optional delay to avoid being blocked
-        time.sleep(2)
+        time.sleep(5)
     
     return listings
 
