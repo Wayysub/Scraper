@@ -6,6 +6,7 @@ import pandas as pd
 from scraper import scrape_yellow_pages  # Import the updated scraper function
 import os
 from celery_config import make_celery
+import ssl
 
 app = Flask(__name__)
 
@@ -15,20 +16,23 @@ redis_url = os.getenv('REDIS_URL', 'rediss://red-csrlobggph6c73b8o3tg:GsHXpplWrr
 app.config['CELERY_BROKER_URL'] = redis_url
 app.config['CELERY_RESULT_BACKEND'] = redis_url
 
-# SSL Options
-ssl_options = {
-    'ssl_cert_reqs': 'CERT_NONE'  # Change to 'CERT_REQUIRED' if you have valid certificates
+# Set SSL context for Redis
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE  # Use ssl.CERT_REQUIRED if you have certificates
+
+# Set Celery broker transport options for SSL
+app.config['CELERY_BROKER_TRANSPORT_OPTIONS'] = {
+    'visibility_timeout': 3600,  # Timeout for unacknowledged messages
+    'max_connections': 5,        # Reduce to limit concurrent connections
+    'ssl': {
+        'ssl_cert_reqs': ssl.CERT_NONE  # Adjust as needed
+    }
 }
 
-# Celery Broker and Backend SSL Configuration
-app.config['CELERY_BROKER_USE_SSL'] = ssl_options
-app.config['CELERY_REDIS_BACKEND_USE_SSL'] = ssl_options
-
-# Set broker transport options to control connection behavior
-app.config['CELERY_BROKER_TRANSPORT_OPTIONS'] = {
-    'visibility_timeout': 3600,  # 1 hour timeout
-    'max_connections': 5,  # Adjust to reduce concurrent connections to Redis
-    'ssl': ssl_options
+# Configure Redis backend for SSL
+app.config['CELERY_REDIS_BACKEND_USE_SSL'] = {
+    'ssl_cert_reqs': ssl.CERT_NONE  # Adjust as needed
 }
 
 celery = make_celery(app)
@@ -84,7 +88,7 @@ def scrape_yellow_pages_task(self, keyword, location, max_pages):
 
         return {'current': 100, 'total': 100, 'status': 'Task completed!', 'result': output_file}
     except Exception as e:
-        raise self.retry(exc=e, countdown=60, max_retries=2)  # Updated to reduce retry frequency
+        raise self.retry(exc=e, countdown=60, max_retries=2)  # Fewer retries, longer delay
 
 @app.route('/download')
 def download():
